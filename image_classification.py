@@ -82,7 +82,7 @@ def load_or_create_model_card(
     inference: Optional[bool] = None,
 ) -> ModelCard:
 
-    MODEL_CARD_TEMPLATE_PATH = "model_card_template.md"
+    MODEL_CARD_TEMPLATE_PATH = "./model_card_template.md"
 
     if from_training:
 
