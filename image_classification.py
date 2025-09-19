@@ -49,9 +49,12 @@ from transformers import (
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
+from huggingface_hub import ModelCard, ModelCardData
+from typing  import Optional, List, Union
+from huggingface_hub import ModelCard, ModelCardData, create_repo, upload_folder
+from pathlib import Path
 
-
-""" Fine-tuning a 🤗 Transformers model for image classification"""
+""" Fine-tuning a Transformers model for image classification"""
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +71,96 @@ def pil_loader(path: str):
     with open(path, "rb") as f:
         im = Image.open(f)
         return im.convert("RGB")
+
+
+
+def load_or_create_model_card(
+    from_training: bool = False,
+    model_description: Optional[str] = None,
+    base_model: str = None,
+    license: Optional[str] = 'mit',
+    inference: Optional[bool] = None,
+) -> ModelCard:
+
+    MODEL_CARD_TEMPLATE_PATH = "model_card_template.md"
+
+    if from_training:
+
+        card_data = ModelCardData(
+            license=license,
+            library_name="transformers",
+            inference=inference,
+            base_model=base_model
+        )
+        model_card = ModelCard.from_template(
+            card_data=card_data,
+            template_path=MODEL_CARD_TEMPLATE_PATH,
+            model_description=model_description,
+        )
+
+    else:
+
+        card_data = ModelCardData()
+        if model_description is None:
+            model_description = f"This is the model card of a transformer that has been pushed on the Hub. This model card has been automatically generated."
+        model_card = ModelCard.from_template(card_data, model_description=model_description)
+
+    return model_card
+
+
+def populate_model_card(model_card: ModelCard, tags: Union[str, List[str]] = None) -> ModelCard:
+    """Populates the `model_card` with library name and optional tags."""
+    if model_card.data.library_name is None:
+        model_card.data.library_name = "transformers"
+
+    if tags is not None:
+        if isinstance(tags, str):
+            tags = [tags]
+        if model_card.data.tags is None:
+            model_card.data.tags = []
+        for tag in tags:
+            model_card.data.tags.append(tag)
+
+    return model_card
+
+
+def save_model_card(
+    images =None,
+    base_model=str,
+    dataset_name=str,
+    repo_folder=str
+):
+    img_str = ""
+
+    images = [Image.open(image) for image in images]
+    for i, image in enumerate(images):
+
+         image.save(os.path.join(repo_folder, f"image_{i}.png"))
+
+         img_str += f"![img_{i}](./image_{i}.png)\n"
+
+    model_description = f"""
+# Image Classification
+
+This model is a fine-tuned version of {base_model} on the {dataset_name} dataset. \n
+You can find some example images in the following. \n
+{img_str}
+
+"""
+
+
+    model_card = load_or_create_model_card(
+        from_training=True,
+        license="creativeml-openrail-m",
+        base_model=base_model,
+        model_description=model_description,
+        inference=True,
+    )
+    tags = ["image-classification"]
+
+    model_card = populate_model_card(model_card, tags=tags)
+
+    model_card.save(os.path.join(repo_folder, "README.md"))
 
 
 @dataclass
@@ -432,7 +525,20 @@ def main():
         "tags": ["image-classification", "vision"],
     }
     if training_args.push_to_hub:
-        trainer.push_to_hub(**kwargs)
+        repo_id = create_repo(Path(training_args.output_dir).name, exist_ok=True, token=None).repo_id
+        save_model_card(
+            images=["images_samples/0.jpg", "images_samples/1.jpg", "images_samples/2.jpg", "images_samples/3.jpg"],
+            base_model=model_args.model_name_or_path,
+            dataset_name=data_args.dataset_name,
+            repo_folder=training_args.output_dir
+            )
+        upload_folder(
+                repo_id=repo_id,
+                folder_path=training_args.output_dir,
+                commit_message="End of training",
+                ignore_patterns=["step_*", "epoch_*"],
+            )
+        #trainer.push_to_hub(**kwargs)
     else:
         trainer.create_model_card(**kwargs)
 
