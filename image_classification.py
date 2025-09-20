@@ -527,7 +527,7 @@ def main():
     if training_args.push_to_hub:
         repo_id = create_repo(Path(training_args.output_dir).name, exist_ok=True, token=None).repo_id
         save_model_card(
-            images=["images_samples/0.jpg", "images_samples/1.jpg", "images_samples/2.jpg", "images_samples/3.jpg"],
+            images=[f'./images_samples/{i}' for i in os.listdir('./images_samples')],
             base_model=model_args.model_name_or_path,
             dataset_name=data_args.dataset_name,
             repo_folder=training_args.output_dir
