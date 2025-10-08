@@ -47,7 +47,6 @@ from transformers import (
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
-#from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 from huggingface_hub import ModelCard, ModelCardData
 from typing  import Optional, List, Union
@@ -58,10 +57,6 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Will error if the minimal version of Transformers is not installed. Remove at your own risks.
-#check_min_version("4.52.0.dev0")
-
-#require_version("datasets>=2.14.0", "To fix: pip install -r examples/pytorch/image-classification/requirements.txt")
 
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_IMAGE_CLASSIFICATION_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
